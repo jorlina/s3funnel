@@ -5,6 +5,7 @@
 # the MIT license: http://www.opensource.org/licenses/mit-license.php
 
 from workerpool import Job
+import mimetypes
 import boto
 import time
 try:
