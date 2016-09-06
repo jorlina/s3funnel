@@ -91,8 +91,23 @@ class GetJob(Job):
 class PutJob(Job):
     "Upload the given file to S3, where the key corresponds to basename(path)"
     def __init__(self, bucket, path, failed, config={}):
+        # Add some Maven-specific extensions and mime-types to boto can guess accurately
+        mimetypes.add_type('text/plain', '.md5')
+        mimetypes.add_type('text/plain', '.sha1')
+        mimetypes.add_type('text/plain', '.properties')
+        mimetypes.add_type('text/xml', '.pom')
+        mimetypes.add_type('application/x-java-archive', '.war')
+        mimetypes.add_type('application/x-java-archive', '.ear')        
         self.bucket = bucket
-        self.path = path
+        values = path.split("\t")
+        fileheaders = {}
+        for field in values:
+            if '::' not in field:
+                self.path = field
+            else:
+                filekey, filevalue = field.split('::', 2)
+                fileheaders[filekey.strip()] = filevalue.strip()        
+        # self.path = path
         self.failed = failed
         # --add-prefix logic
         self.add_prefix = config.get('add_prefix', '')
@@ -105,7 +120,9 @@ class PutJob(Job):
             self.key = os.path.basename(self.key)
         self.retries = config.get('retry', 5)
         self.only_new = config.get('put_only_new')
-        self.headers = config.get('headers', {})
+        # self.headers = config.get('headers', {})
+        self.headers = fileheaders # config.get('headers', {})
+        self.headers.update(config.get('headers', {}))        
         acl = config.get('acl')
         if acl not in ['private', 'public-read', 'public-read-write', 'authenticated-read']:
             log.warning("Bad ACL `%s` for key, setting to `private`: %s" % (self.acl, self.key))
