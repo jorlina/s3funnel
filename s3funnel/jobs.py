@@ -47,7 +47,11 @@ class GetJob(Job):
                 b.connection.provider.metadata_prefix = ''
                 k = b.get_key(self.key)
                 m = k.get_metadata('content-type')
-                
+                lme = k.get_metadata('x-amz-meta-last-modified-epoch')
+                lms = None
+                if lme and int(lme):
+                    lmeint = int(lme) / 1000
+                    lms = (lmeint, lmeint)                
                 if m == 'application/x-directory' and self.ignore_s3fs_dirs:
                      log.warn("Skipping s3fs directory: %s" % self.key)
                      return
@@ -59,6 +63,7 @@ class GetJob(Job):
                     pass
                 # Note: This creates a file, even if the download fails
                 k.get_contents_to_filename(self.key)
+                os.utime(self.key, lms)                
                 log.info("Got: %s" % self.key)
                 return
             except S3ResponseError, e:
